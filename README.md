@@ -10,8 +10,9 @@ SNS運用担当者が抱えがちな「記事は書いたが、SNS投稿文を�
 
 - **WordPress連携**: WordPress REST APIから記事を取得
 - **AI投稿文生成**: Claude APIを使い、記事内容からX用・Instagram用の投稿文をそれぞれ自動生成
+- **AI画像生成**: Claudeが記事内容から画像生成用プロンプト(モダンなエディトリアルイラスト調、実在人物の写実描写は禁止)を作成し、OpenAIの画像生成API(`gpt-image-1`)でオリジナル画像を生成
 - **承認UI**: AIが生成した下書きを一覧・編集・承認できる画面(AI生成物を無検証で投稿しないための安全策)
-- **即時投稿・予約投稿**: 承認済みの投稿をX/Instagramへ即時実行、または日時を指定して予約実行(Xは記事のアイキャッチ画像を自動添付)
+- **即時投稿・予約投稿**: 承認済みの投稿をX/Instagramへ即時実行、または日時を指定して予約実行(AI生成画像があればそれを、なければ記事のアイキャッチ画像を自動添付)
   - 繰り返し: 毎日 / 毎週 / 毎週平日 / 毎月 / 毎年 / カスタム(◯日・週間・か月・年ごと、曜日指定、終了日または回数指定)
   - 裏側でスケジューラー(APScheduler)が1分間隔でチェックし、該当時刻になった予約を自動実行
 - **カレンダー**: 投稿済み・予約済みの投稿を月表示で確認。日付クリックでその曜日のレコメンド設定へ移動
@@ -22,8 +23,9 @@ SNS運用担当者が抱えがちな「記事は書いたが、SNS投稿文を�
 - バックエンド: Python / FastAPI
 - DB: SQLite + SQLAlchemy
 - スケジューラー: APScheduler(アプリ起動中、1分間隔でバックグラウンド実行)
-- AI生成: Anthropic Claude API
-- X投稿: X API v2(tweepy)
+- AI生成(文章): Anthropic Claude API
+- AI生成(画像): OpenAI画像生成API(`gpt-image-1`)
+- X投稿: X API v2(tweepy)、画像添付は v1.1 メディアアップロード経由
 - Instagram投稿: Instagram Graph API(Meta App Review完了までモック実装で動作)
 - 画面: Jinja2テンプレートによるサーバーサイドレンダリング
 
@@ -53,6 +55,7 @@ X_API_KEY_SECRET=
 X_ACCESS_TOKEN=
 X_ACCESS_TOKEN_SECRET=
 ANTHROPIC_API_KEY=
+OPENAI_API_KEY=                  # AI画像生成に使用
 WP_SITE_URL=                     # 未設定時はWordPress公式ニュースブログを使用
 INSTAGRAM_ACCESS_TOKEN=          # 未設定時はモック応答
 INSTAGRAM_BUSINESS_ACCOUNT_ID=   # 未設定時はモック応答

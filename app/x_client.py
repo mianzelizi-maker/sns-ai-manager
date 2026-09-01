@@ -30,7 +30,7 @@ def _v2_client() -> tweepy.Client:
     )
 
 
-def _upload_image(image_url: str) -> str | None:
+def _upload_image_from_url(image_url: str) -> str | None:
     try:
         response = requests.get(image_url, timeout=15)
         response.raise_for_status()
@@ -43,10 +43,23 @@ def _upload_image(image_url: str) -> str | None:
         return None
 
 
-def post_tweet(content: str, image_url: str | None = None) -> str:
+def _upload_image_from_path(image_path: str) -> str | None:
+    try:
+        media = _oauth1_api().media_upload(filename=image_path)
+        return media.media_id
+    except Exception:
+        logger.exception("画像のアップロードに失敗したため、テキストのみで投稿します")
+        return None
+
+
+def post_tweet(content: str, image_url: str | None = None, image_path: str | None = None) -> str:
     media_ids = None
-    if image_url:
-        media_id = _upload_image(image_url)
+    if image_path:
+        media_id = _upload_image_from_path(image_path)
+        if media_id:
+            media_ids = [media_id]
+    elif image_url:
+        media_id = _upload_image_from_url(image_url)
         if media_id:
             media_ids = [media_id]
 

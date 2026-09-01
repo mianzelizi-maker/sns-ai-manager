@@ -15,6 +15,7 @@
       <tr>
         <th>記事タイトル</th>
         <th>媒体</th>
+        <th>AI画像</th>
         <th>投稿内容(下書き)</th>
         <th>ステータス</th>
         <th>操作</th>
@@ -25,6 +26,16 @@
       <tr>
         <td data-label="記事タイトル">{{ post.article.title }}</td>
         <td data-label="媒体">{{ post.platform.value }}</td>
+        <td data-label="AI画像">
+          {% if post.ai_image_path %}
+          <img src="/generated_images/{{ post.ai_image_path }}" alt="AI生成画像" style="width:60px;height:60px;object-fit:cover;border-radius:6px;display:block;margin-bottom:6px;">
+          {% endif %}
+          {% if post.status.value != "posted" %}
+          <form method="post" action="/posts/{{ post.id }}/generate-image">
+            <button type="submit" style="font-size:11.5px;padding:4px 8px;">{{ "再生成" if post.ai_image_path else "AI画像を生成" }}</button>
+          </form>
+          {% endif %}
+        </td>
         <td data-label="投稿内容(下書き)" class="content-preview">{{ post.content[:120] }}{% if post.content|length > 120 %}...{% endif %}</td>
         <td data-label="ステータス"><span class="badge {{ post.status.value }}">{{ post.status.value }}</span></td>
         <td data-label="操作" class="actions">
@@ -71,7 +82,7 @@
         </td>
       </tr>
       {% else %}
-      <tr class="empty-row"><td colspan="5">まだ投稿がありません。</td></tr>
+      <tr class="empty-row"><td colspan="6">まだ投稿がありません。</td></tr>
       {% endfor %}
     </tbody>
   </table>

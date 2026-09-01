@@ -4,13 +4,15 @@ from urllib.parse import quote
 
 from fastapi import Depends, FastAPI, Form, Request
 from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app import models  # noqa: F401  register models before create_all
-from app.ai_generator import generate_sns_posts
+from app.ai_generator import generate_image_prompt, generate_sns_posts
 from app.calendar_view import build_calendar
 from app.database import Base, engine, get_db
+from app.image_generator import IMAGE_DIR, generate_image
 from app.instagram_client import post_to_instagram
 from app.recommender import (
     WEEKDAY_LABELS,
@@ -27,6 +29,7 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="SNS AI運用システム")
 templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
+app.mount("/generated_images", StaticFiles(directory=IMAGE_DIR), name="generated_images")
 
 
 @app.on_event("startup")
@@ -63,6 +66,18 @@ def update_post(post_id: int, content: str = Form(...), db: Session = Depends(ge
     return RedirectResponse(url="/posts", status_code=303)
 
 
+@app.post("/posts/{post_id}/generate-image")
+def generate_post_image(post_id: int, db: Session = Depends(get_db)):
+    post = db.get(models.GeneratedPost, post_id)
+    try:
+        prompt = generate_image_prompt(post.article.title, post.article.body)
+        post.ai_image_path = generate_image(prompt, post.id)
+        db.commit()
+    except Exception as exc:
+        return RedirectResponse(url="/posts?error=" + quote(str(exc)), status_code=303)
+    return RedirectResponse(url="/posts", status_code=303)
+
+
 @app.post("/posts/{post_id}/approve")
 def approve_post(post_id: int, db: Session = Depends(get_db)):
     post = db.get(models.GeneratedPost, post_id)
@@ -76,8 +91,11 @@ def publish_post(post_id: int, db: Session = Depends(get_db)):
     post = db.get(models.GeneratedPost, post_id)
 
     try:
+        image_path = str(IMAGE_DIR / post.ai_image_path) if post.ai_image_path else None
         if post.platform == models.Platform.X:
-            external_post_id = post_tweet(post.content, post.article.featured_image_url)
+            external_post_id = post_tweet(
+                post.content, post.article.featured_image_url, image_path
+            )
         elif post.platform == models.Platform.INSTAGRAM:
             external_post_id = post_to_instagram(
                 post.content, post.article.featured_image_url

@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% set active_page = "posts" %}
+{% block content %}
+<h1>投稿内容の編集</h1>
+<p class="page-lead"><a href="/posts" style="color:var(--accent);text-decoration:none;">&larr; 一覧に戻る</a></p>
+
+<div class="card">
+  <div class="meta">
+    記事: {{ post.article.title }} / 媒体: {{ post.platform.value }} / ステータス:
+    <span class="badge {{ post.status.value }}">{{ post.status.value }}</span>
+    {% if post.post_log and post.post_log.external_post_id.startswith("mock_") %}
+    <span style="color:var(--accent-warm);font-size:12px;">(モック・実際には未投稿)</span>
+    {% endif %}
+  </div>
+  <form class="edit-form" method="post" action="/posts/{{ post.id }}">
+    <textarea name="content">{{ post.content }}</textarea>
+    <br>
+    <input type="submit" value="保存する">
+  </form>
+</div>
+{% endblock %}

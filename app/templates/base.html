@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}SNS投稿 承認管理{% endblock %}</title>
+  <style>
+    :root {
+      --bg: #f5f6f3;
+      --surface: #ffffff;
+      --surface-sunken: #eef1ec;
+      --ink: #1b2321;
+      --ink-muted: #5b655f;
+      --ink-faint: #8a938c;
+      --accent: #2e6e63;
+      --accent-soft: #e4efeb;
+      --accent-warm: #b5702c;
+      --accent-warm-soft: #f3e7d8;
+      --border: #dbe1da;
+      --border-strong: #b9c4bc;
+      --shadow: 0 1px 3px rgba(27, 35, 33, 0.06);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: "Segoe UI", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      margin: 0;
+      line-height: 1.6;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 32px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .topbar .brand {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--ink);
+      letter-spacing: 0.02em;
+    }
+
+    .topbar nav {
+      display: flex;
+      gap: 4px;
+    }
+
+    .topbar nav a {
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      color: var(--ink-muted);
+      text-decoration: none;
+    }
+
+    .topbar nav a:hover {
+      background: var(--surface-sunken);
+      color: var(--ink);
+    }
+
+    .topbar nav a.active {
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    main {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 32px;
+    }
+
+    h1 {
+      font-size: 19px;
+      font-weight: 700;
+      margin: 0 0 4px;
+    }
+
+    .page-lead {
+      color: var(--ink-muted);
+      font-size: 13px;
+      margin: 0 0 24px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      margin-bottom: 32px;
+    }
+
+    .card h2 {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--ink-muted);
+      letter-spacing: 0.03em;
+      margin: 0;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface-sunken);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+      font-size: 13.5px;
+    }
+
+    thead th {
+      background: var(--surface-sunken);
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      color: var(--ink-faint);
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: #fafbfa; }
+
+    .content-preview {
+      max-width: 420px;
+      white-space: pre-wrap;
+      color: var(--ink-muted);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+    .badge.draft { background: var(--accent-warm-soft); color: var(--accent-warm); }
+    .badge.approved { background: var(--accent-soft); color: var(--accent); }
+    .badge.posted { background: var(--border); color: var(--ink); }
+
+    .actions { white-space: nowrap; }
+    .actions a, .actions button {
+      display: inline-block;
+      margin-right: 6px;
+      padding: 6px 12px;
+      font-size: 12.5px;
+      border: 1px solid var(--border-strong);
+      background: var(--surface);
+      color: var(--ink);
+      text-decoration: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .actions a:hover { background: var(--surface-sunken); }
+    .actions button.approve {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    .actions button.approve:hover { opacity: 0.9; }
+    .actions .posted-label { color: var(--ink-faint); font-size: 12.5px; }
+
+    .empty-row td {
+      text-align: center;
+      color: var(--ink-faint);
+      padding: 32px;
+    }
+
+    form.edit-form {
+      padding: 18px;
+    }
+    form.edit-form textarea {
+      width: 100%;
+      min-height: 220px;
+      font-family: inherit;
+      font-size: 14px;
+      padding: 12px;
+      border: 1px solid var(--border-strong);
+      border-radius: 6px;
+      box-sizing: border-box;
+      resize: vertical;
+    }
+    form.edit-form textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    form.edit-form input[type="submit"] {
+      margin-top: 14px;
+      padding: 8px 22px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13.5px;
+      font-weight: 700;
+    }
+    form.edit-form input[type="submit"]:hover { opacity: 0.9; }
+
+    .meta {
+      color: var(--ink-muted);
+      font-size: 13px;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface-sunken);
+    }
+
+    .banner-error {
+      background: var(--accent-warm-soft);
+      color: var(--accent-warm);
+      padding: 12px 16px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      font-size: 13px;
+    }
+
+    select, input[type="date"], input[type="number"], input[type="text"] {
+      font-family: inherit;
+      padding: 7px 9px;
+      border: 1px solid var(--border-strong);
+      border-radius: 6px;
+      font-size: 13.5px;
+      color: var(--ink);
+      background: var(--surface);
+      transition: border-color 0.15s;
+    }
+    select:hover, input[type="date"]:hover, input[type="number"]:hover, input[type="text"]:hover {
+      border-color: var(--ink-faint);
+    }
+    select:focus, input[type="date"]:focus, input[type="number"]:focus, input[type="text"]:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    select:disabled { color: var(--ink-faint); cursor: not-allowed; }
+
+    .table-scroll { overflow-x: auto; }
+
+    @media (max-width: 720px) {
+      main { padding: 18px; }
+      .topbar { padding: 12px 18px; flex-wrap: wrap; gap: 8px; }
+
+      .responsive-table thead { display: none; }
+      .responsive-table, .responsive-table tbody, .responsive-table tr, .responsive-table td {
+        display: block;
+        width: 100%;
+      }
+      .responsive-table tbody tr {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        margin-bottom: 12px;
+        padding: 12px 14px;
+      }
+      .responsive-table tbody tr:hover td { background: none; }
+      .responsive-table td {
+        border-bottom: none;
+        padding: 6px 0;
+      }
+      .responsive-table td[data-label]::before {
+        content: attr(data-label);
+        display: block;
+        font-size: 11px;
+        letter-spacing: 0.04em;
+        color: var(--ink-faint);
+        font-weight: 700;
+        margin-bottom: 2px;
+      }
+      .responsive-table .content-preview { max-width: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <span class="brand">SNS AI運用システム</span>
+    <nav>
+      <a href="/posts" class="{% if active_page == 'posts' %}active{% endif %}">投稿一覧</a>
+      <a href="/calendar" class="{% if active_page == 'calendar' %}active{% endif %}">カレンダー</a>
+      <a href="/recommendations" class="{% if active_page == 'recommendations' %}active{% endif %}">レコメンド</a>
+    </nav>
+  </div>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

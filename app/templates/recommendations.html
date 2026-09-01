@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% set active_page = "recommendations" %}
+{% block content %}
+<style>
+  .weekday-row.weekday-off { background: var(--surface-sunken) !important; }
+  .weekday-row.weekday-off td { color: var(--ink-faint) !important; opacity: 0.6; }
+  .weekday-row.weekday-off select { color: var(--ink-faint); }
+</style>
+<h1>レコメンド</h1>
+<p class="page-lead">曜日ごとのおすすめ投稿時間帯と、しばらく投稿されていない記事(リポスト候補)です。カレンダーの日付から、その曜日の設定にジャンプできます。</p>
+
+{% if clicked_date %}
+<div class="callout" style="background:var(--accent-soft);border:1px solid var(--border);border-left:3px solid var(--accent);padding:10px 16px;border-radius:4px;margin-bottom:20px;font-size:13px;color:var(--accent);">
+  カレンダーから選択: <strong>{{ clicked_date }}({{ weekday_labels[highlight_weekday] }}曜日)</strong>
+</div>
+{% endif %}
+
+<div class="card">
+  <h2>おすすめ投稿時間帯(曜日別)</h2>
+  <form method="post" action="/recommendations/times">
+    <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>曜日</th>
+          <th>投稿</th>
+          <th>繰り返し</th>
+          <th>x(開始〜終了)</th>
+          <th>instagram(開始〜終了)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for weekday in range(7) %}
+        {% set is_enabled = repeat_settings[weekday]["enabled"] %}
+        <tr id="weekday-{{ weekday }}" class="weekday-row {% if not is_enabled %}weekday-off{% endif %}"
+            style="{% if highlight_weekday == weekday %}background:var(--accent-soft);{% endif %}">
+          <td style="font-weight:700;">
+            {{ weekday_labels[weekday] }}曜日
+            {% if highlight_weekday == weekday %}<span style="color:var(--accent);font-size:11px;">(選択中)</span>{% endif %}
+          </td>
+          <td>
+            <select name="enabled__{{ weekday }}" class="enabled-select" data-weekday="{{ weekday }}"
+                    style="padding:6px 8px;border:1px solid var(--border-strong);border-radius:5px;font-size:13.5px;">
+              <option value="on" {% if is_enabled %}selected{% endif %}>投稿する</option>
+              <option value="off" {% if not is_enabled %}selected{% endif %}>投稿しない</option>
+            </select>
+          </td>
+          <td>
+            <select name="repeat__{{ weekday }}" class="repeat-select" data-weekday="{{ weekday }}"
+                    style="padding:6px 8px;border:1px solid var(--border-strong);border-radius:5px;font-size:13.5px;">
+              {% set repeat_options = [("none", "繰り返さない"), ("daily", "毎日"), ("weekly", "毎週"), ("weekdays", "毎週平日"), ("monthly", "毎月"), ("yearly", "毎年"), ("custom", "カスタム")] %}
+              {% for value, label in repeat_options %}
+              <option value="{{ value }}" {% if value == repeat_settings[weekday]["repeat"] %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </td>
+          <td>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <select name="start__x__{{ weekday }}"
+                      style="padding:6px 8px;border:1px solid var(--border-strong);border-radius:5px;font-size:13.5px;">
+                {% for h in range(24) %}
+                {% set opt = "%02d:00" | format(h) %}
+                <option value="{{ opt }}" {% if opt == recommended_times[Platform.X][weekday]["start"] %}selected{% endif %}>{{ opt }}</option>
+                {% endfor %}
+              </select>
+              <span style="color:var(--ink-faint);">〜</span>
+              <select name="end__x__{{ weekday }}"
+                      style="padding:6px 8px;border:1px solid var(--border-strong);border-radius:5px;font-size:13.5px;">
+                {% for h in range(24) %}
+                {% set opt = "%02d:00" | format(h) %}
+                <option value="{{ opt }}" {% if opt == recommended_times[Platform.X][weekday]["end"] %}selected{% endif %}>{{ opt }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </td>
+          <td>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <select name="start__instagram__{{ weekday }}"
+                      style="padding:6px 8px;border:1px solid var(--border-strong);border-radius:5px;font-size:13.5px;">
+                {% for h in range(24) %}
+                {% set opt = "%02d:00" | format(h) %}
+                <option value="{{ opt }}" {% if opt == recommended_times[Platform.INSTAGRAM][weekday]["start"] %}selected{% endif %}>{{ opt }}</option>
+                {% endfor %}
+              </select>
+              <span style="color:var(--ink-faint);">〜</span>
+              <select name="end__instagram__{{ weekday }}"
+                      style="padding:6px 8px;border:1px solid var(--border-strong);border-radius:5px;font-size:13.5px;">
+                {% for h in range(24) %}
+                {% set opt = "%02d:00" | format(h) %}
+                <option value="{{ opt }}" {% if opt == recommended_times[Platform.INSTAGRAM][weekday]["end"] %}selected{% endif %}>{{ opt }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </td>
+        </tr>
+        <tr id="custom-row-{{ weekday }}" class="custom-weekday-row" style="display:none;">
+          <td colspan="5" style="background:var(--surface-sunken);">
+            <span style="font-size:12px;color:var(--ink-muted);margin-right:8px;">繰り返す間隔:</span>
+            <input type="number" name="custom_interval__{{ weekday }}" min="1"
+                   value="{{ repeat_settings[weekday]['custom_interval'] }}"
+                   style="width:60px;padding:5px 8px;border:1px solid var(--border-strong);border-radius:5px;font-size:13.5px;">
+            <select name="custom_unit__{{ weekday }}"
+                    style="padding:5px 8px;border:1px solid var(--border-strong);border-radius:5px;font-size:13.5px;">
+              {% set unit_options = [("day", "日ごと"), ("week", "週間ごと"), ("month", "か月ごと"), ("year", "年ごと")] %}
+              {% for value, label in unit_options %}
+              <option value="{{ value }}" {% if value == repeat_settings[weekday]["custom_unit"] %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    <div style="padding:14px 18px;">
+      <button type="submit" class="approve" style="border:none;">保存する</button>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <h2>リポスト候補記事(直近{{ days }}日間未投稿)</h2>
+  <table>
+    <thead>
+      <tr><th>記事タイトル</th><th>取得日</th><th>操作</th></tr>
+    </thead>
+    <tbody>
+      {% for article in repost_candidates %}
+      <tr>
+        <td>{{ article.title }}</td>
+        <td>{{ article.fetched_at.strftime("%Y-%m-%d") }}</td>
+        <td class="actions">
+          <form method="post" action="/recommendations/{{ article.id }}/regenerate" style="display:inline">
+            <button type="submit" class="approve">投稿文を再生成</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr class="empty-row"><td colspan="3">リポスト候補はありません。</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if highlight_weekday is not none %}
+<script>
+document.getElementById("weekday-{{ highlight_weekday }}").scrollIntoView({behavior: "smooth", block: "center"});
+</script>
+{% endif %}
+
+<script>
+document.querySelectorAll(".repeat-select").forEach(function (select) {
+  function toggle() {
+    var row = document.getElementById("custom-row-" + select.dataset.weekday);
+    row.style.display = select.value === "custom" ? "table-row" : "none";
+  }
+  select.addEventListener("change", toggle);
+  toggle();
+});
+
+document.querySelectorAll(".enabled-select").forEach(function (select) {
+  function toggle() {
+    var row = document.getElementById("weekday-" + select.dataset.weekday);
+    row.classList.toggle("weekday-off", select.value === "off");
+  }
+  select.addEventListener("change", toggle);
+  toggle();
+});
+</script>
+{% endblock %}

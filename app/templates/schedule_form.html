@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% set active_page = "posts" %}
+{% block content %}
+<h1>予約投稿の設定</h1>
+<p class="page-lead"><a href="/posts" style="color:var(--accent);text-decoration:none;">&larr; 一覧に戻る</a></p>
+
+<div class="card">
+  <div class="meta">
+    記事: {{ post.article.title }} / 媒体: {{ post.platform.value }}
+  </div>
+  <form class="edit-form" method="post" action="/posts/{{ post.id }}/schedule">
+
+    <div style="margin-bottom:16px;">
+      <label style="display:block;font-size:12.5px;color:var(--ink-muted);margin-bottom:6px;">開始</label>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="date" name="date" required
+               style="padding:8px 10px;border:1px solid var(--border-strong);border-radius:6px;font-size:14px;">
+        <select name="time" required
+                style="padding:8px 10px;border:1px solid var(--border-strong);border-radius:6px;font-size:14px;">
+          {% for h in range(24) %}
+          {% set opt = "%02d:00" | format(h) %}
+          <option value="{{ opt }}">{{ opt }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <label style="display:block;font-size:12.5px;color:var(--ink-muted);margin-bottom:6px;">繰り返し</label>
+      <select name="repeat" id="repeat-select"
+              style="padding:8px 10px;border:1px solid var(--border-strong);border-radius:6px;font-size:14px;">
+        <option value="none">繰り返さない</option>
+        <option value="daily">毎日</option>
+        <option value="weekly">毎週(開始日と同じ曜日)</option>
+        <option value="weekdays">毎週平日(月〜金)</option>
+        <option value="monthly">毎月(開始日と同じ日)</option>
+        <option value="yearly">毎年(開始日と同じ月日)</option>
+        <option value="custom">カスタム...</option>
+      </select>
+    </div>
+
+    <div id="simple-until-row" style="margin-bottom:16px;display:none;">
+      <label style="display:block;font-size:12.5px;color:var(--ink-muted);margin-bottom:6px;">
+        終了(繰り返す場合、この日以降は投稿しません。空欄なら無期限)
+      </label>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="date" name="repeat_until"
+               style="padding:8px 10px;border:1px solid var(--border-strong);border-radius:6px;font-size:14px;">
+        <select name="repeat_until_time"
+                style="padding:8px 10px;border:1px solid var(--border-strong);border-radius:6px;font-size:14px;">
+          {% for h in range(24) %}
+          {% set opt = "%02d:00" | format(h) %}
+          <option value="{{ opt }}" {% if h == 23 %}selected{% endif %}>{{ opt }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div id="custom-builder" style="display:none;background:var(--surface-sunken);border:1px solid var(--border);border-radius:8px;padding:18px;margin-bottom:16px;">
+      <div style="font-weight:700;font-size:14px;margin-bottom:14px;">カスタムの繰り返し</div>
+
+      <div style="margin-bottom:14px;">
+        <label style="display:block;font-size:12.5px;color:var(--ink-muted);margin-bottom:6px;">繰り返す間隔</label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="number" name="custom_interval" value="1" min="1"
+                 style="width:70px;padding:8px 10px;border:1px solid var(--border-strong);border-radius:6px;font-size:14px;">
+          <select name="custom_unit" id="custom-unit"
+                  style="padding:8px 10px;border:1px solid var(--border-strong);border-radius:6px;font-size:14px;">
+            <option value="day">日ごと</option>
+            <option value="week" selected>週間ごと</option>
+            <option value="month">か月ごと</option>
+            <option value="year">年ごと</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="custom-weekdays-row" style="margin-bottom:14px;">
+        <label style="display:block;font-size:12.5px;color:var(--ink-muted);margin-bottom:6px;">曜日</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          {% for label in ["日", "月", "火", "水", "木", "金", "土"] %}
+          {% set wd = (loop.index0 + 6) % 7 %}
+          <label style="width:32px;height:32px;border-radius:50%;border:1px solid var(--border-strong);
+                        display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;">
+            <input type="checkbox" name="custom_weekdays" value="{{ wd }}" style="display:none;">
+            {{ label }}
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div>
+        <label style="display:block;font-size:12.5px;color:var(--ink-muted);margin-bottom:6px;">終了日</label>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <label style="font-size:13.5px;display:flex;align-items:center;gap:6px;">
+            <input type="radio" name="custom_end_type" value="none" checked> なし
+          </label>
+          <label style="font-size:13.5px;display:flex;align-items:center;gap:6px;">
+            <input type="radio" name="custom_end_type" value="until"> 終了日:
+            <input type="date" name="custom_until" class="custom-end-input" data-for="until"
+                   style="padding:6px 8px;border:1px solid var(--border-strong);border-radius:5px;font-size:13.5px;" disabled>
+          </label>
+          <label style="font-size:13.5px;display:flex;align-items:center;gap:6px;">
+            <input type="radio" name="custom_end_type" value="count"> 繰り返し:
+            <input type="number" name="custom_count" class="custom-end-input" data-for="count" min="1" value="10"
+                   style="width:70px;padding:6px 8px;border:1px solid var(--border-strong);border-radius:5px;font-size:13.5px;" disabled>
+            回
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <input type="submit" value="予約する">
+  </form>
+</div>
+
+<script>
+  const repeatSelect = document.getElementById("repeat-select");
+  const simpleUntilRow = document.getElementById("simple-until-row");
+  const customBuilder = document.getElementById("custom-builder");
+  const customUnit = document.getElementById("custom-unit");
+  const customWeekdaysRow = document.getElementById("custom-weekdays-row");
+
+  function toggleRepeatUI() {
+    const isCustom = repeatSelect.value === "custom";
+    customBuilder.style.display = isCustom ? "block" : "none";
+    simpleUntilRow.style.display = isCustom ? "none" : "block";
+  }
+  repeatSelect.addEventListener("change", toggleRepeatUI);
+  toggleRepeatUI();
+
+  function toggleWeekdaysRow() {
+    customWeekdaysRow.style.display = customUnit.value === "week" ? "block" : "none";
+  }
+  customUnit.addEventListener("change", toggleWeekdaysRow);
+  toggleWeekdaysRow();
+
+  document.querySelectorAll('input[name="custom_weekdays"]').forEach(function (cb) {
+    function paint() {
+      cb.parentElement.style.background = cb.checked ? "var(--accent)" : "transparent";
+      cb.parentElement.style.color = cb.checked ? "#fff" : "var(--ink)";
+      cb.parentElement.style.borderColor = cb.checked ? "var(--accent)" : "var(--border-strong)";
+    }
+    cb.addEventListener("change", paint);
+    paint();
+  });
+
+  document.querySelectorAll('input[name="custom_end_type"]').forEach(function (radio) {
+    radio.addEventListener("change", function () {
+      document.querySelectorAll(".custom-end-input").forEach(function (input) {
+        input.disabled = input.dataset.for !== radio.value;
+      });
+    });
+  });
+</script>
+{% endblock %}

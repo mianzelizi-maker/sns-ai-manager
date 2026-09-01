@@ -78,10 +78,12 @@ def update_post(post_id: int, content: str = Form(...), db: Session = Depends(ge
 
 
 @app.post("/posts/{post_id}/generate-image")
-def generate_post_image(post_id: int, db: Session = Depends(get_db)):
+def generate_post_image(
+    post_id: int, instruction: str = Form(default=""), db: Session = Depends(get_db)
+):
     post = db.get(models.GeneratedPost, post_id)
     try:
-        prompt = generate_image_prompt(post.article.title, post.article.body)
+        prompt = generate_image_prompt(post.article.title, post.article.body, instruction)
         post.ai_image_path = generate_image(prompt, post.id)
         db.commit()
     except Exception as exc:

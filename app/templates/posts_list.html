@@ -32,6 +32,8 @@
           {% endif %}
           {% if post.status.value != "posted" %}
           <form method="post" action="/posts/{{ post.id }}/generate-image">
+            <input type="text" name="instruction" placeholder="追加の指示(任意)"
+                   style="width:120px;font-size:11px;padding:4px 6px;margin-bottom:4px;display:block;">
             <button type="submit" style="font-size:11.5px;padding:4px 8px;">{{ "再生成" if post.ai_image_path else "AI画像を生成" }}</button>
           </form>
           {% endif %}

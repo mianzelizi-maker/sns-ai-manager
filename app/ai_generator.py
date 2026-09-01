@@ -56,8 +56,10 @@ SNS投稿用の画像を作る画像生成AIへの指示文(英語)を1つだけ
 """
 
 
-def generate_image_prompt(title: str, body: str) -> str:
+def generate_image_prompt(title: str, body: str, instruction: str = "") -> str:
     user_message = f"タイトル: {title}\n\n本文:\n{body[:1000]}"
+    if instruction:
+        user_message += f"\n\n追加の指示(必ず反映すること): {instruction}"
 
     response = client.messages.create(
         model="claude-opus-5",

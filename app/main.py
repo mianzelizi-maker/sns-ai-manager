@@ -32,6 +32,17 @@ templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
 app.mount("/generated_images", StaticFiles(directory=IMAGE_DIR), name="generated_images")
 
 
+def _image_version(filename: str | None) -> int:
+    """画像の最終更新時刻を返す。再生成後にブラウザキャッシュを回避するために使う。"""
+    if not filename:
+        return 0
+    path = IMAGE_DIR / filename
+    return int(path.stat().st_mtime) if path.exists() else 0
+
+
+templates.env.globals["image_version"] = _image_version
+
+
 @app.on_event("startup")
 def _start_scheduler():
     start_scheduler()

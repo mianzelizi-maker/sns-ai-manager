@@ -14,7 +14,7 @@ logger = logging.getLogger("scheduler")
 
 def _publish(generated_post: models.GeneratedPost) -> str:
     if generated_post.platform == models.Platform.X:
-        return post_tweet(generated_post.content)
+        return post_tweet(generated_post.content, generated_post.article.featured_image_url)
     return post_to_instagram(generated_post.content, generated_post.article.featured_image_url)
 
 

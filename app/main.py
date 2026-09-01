@@ -77,7 +77,7 @@ def publish_post(post_id: int, db: Session = Depends(get_db)):
 
     try:
         if post.platform == models.Platform.X:
-            external_post_id = post_tweet(post.content)
+            external_post_id = post_tweet(post.content, post.article.featured_image_url)
         elif post.platform == models.Platform.INSTAGRAM:
             external_post_id = post_to_instagram(
                 post.content, post.article.featured_image_url

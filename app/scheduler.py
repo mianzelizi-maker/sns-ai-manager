@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app import models
 from app.database import SessionLocal
+from app.image_generator import IMAGE_DIR
 from app.instagram_client import post_to_instagram
 from app.x_client import post_tweet
 
@@ -13,8 +14,13 @@ logger = logging.getLogger("scheduler")
 
 
 def _publish(generated_post: models.GeneratedPost) -> str:
+    use_ai_image = generated_post.image_source == "ai" and generated_post.ai_image_path
+    image_path = str(IMAGE_DIR / generated_post.ai_image_path) if use_ai_image else None
+
     if generated_post.platform == models.Platform.X:
-        return post_tweet(generated_post.content, generated_post.article.featured_image_url)
+        return post_tweet(
+            generated_post.content, generated_post.article.featured_image_url, image_path
+        )
     return post_to_instagram(generated_post.content, generated_post.article.featured_image_url)
 
 

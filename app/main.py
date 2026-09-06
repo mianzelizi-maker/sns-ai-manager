@@ -91,6 +91,14 @@ def generate_post_image(
     return RedirectResponse(url="/posts", status_code=303)
 
 
+@app.post("/posts/{post_id}/image-source")
+def set_image_source(post_id: int, source: str = Form(...), db: Session = Depends(get_db)):
+    post = db.get(models.GeneratedPost, post_id)
+    post.image_source = source
+    db.commit()
+    return RedirectResponse(url="/posts", status_code=303)
+
+
 @app.post("/posts/{post_id}/approve")
 def approve_post(post_id: int, db: Session = Depends(get_db)):
     post = db.get(models.GeneratedPost, post_id)
@@ -104,7 +112,8 @@ def publish_post(post_id: int, db: Session = Depends(get_db)):
     post = db.get(models.GeneratedPost, post_id)
 
     try:
-        image_path = str(IMAGE_DIR / post.ai_image_path) if post.ai_image_path else None
+        use_ai_image = post.image_source == "ai" and post.ai_image_path
+        image_path = str(IMAGE_DIR / post.ai_image_path) if use_ai_image else None
         if post.platform == models.Platform.X:
             external_post_id = post_tweet(
                 post.content, post.article.featured_image_url, image_path

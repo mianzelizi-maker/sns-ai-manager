@@ -50,6 +50,7 @@ class GeneratedPost(Base):
     content = Column(Text, nullable=False)
     status = Column(Enum(PostStatus), default=PostStatus.DRAFT)
     ai_image_path = Column(String(500), nullable=True)  # AI生成画像の保存先(未生成ならNone)
+    image_source = Column(String(10), default="ai", nullable=False)  # "ai" or "article"
     created_at = Column(DateTime, default=datetime.utcnow)
 
     article = relationship("Article", back_populates="generated_posts")

@@ -1,3 +1,4 @@
+import os
 from datetime import date, datetime
 from pathlib import Path
 from urllib.parse import quote
@@ -41,6 +42,23 @@ def _image_version(filename: str | None) -> int:
 
 
 templates.env.globals["image_version"] = _image_version
+
+READ_ONLY_MODE = os.environ.get("READ_ONLY_MODE", "").lower() == "true"
+templates.env.globals["read_only_mode"] = READ_ONLY_MODE
+
+
+@app.middleware("http")
+async def read_only_guard(request: Request, call_next):
+    """READ_ONLY_MODE=trueの間は、すべての更新系リクエスト(POST)を無効化する。
+    デモ用に不特定多数へ公開したURLで、投稿実行などの操作をされないための安全策。
+    """
+    if READ_ONLY_MODE and request.method == "POST":
+        target = "/recommendations" if request.url.path.startswith("/recommendations") else "/posts"
+        return RedirectResponse(
+            url=f"{target}?error=" + quote("デモ公開環境のため、この操作は無効になっています"),
+            status_code=303,
+        )
+    return await call_next(request)
 
 
 @app.on_event("startup")

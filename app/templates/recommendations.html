@@ -9,6 +9,10 @@
 <h1>レコメンド</h1>
 <p class="page-lead">曜日ごとのおすすめ投稿時間帯と、しばらく投稿されていない記事(リポスト候補)です。カレンダーの日付から、その曜日の設定にジャンプできます。</p>
 
+{% if request.query_params.get("error") %}
+<div class="banner-error">{{ request.query_params.get("error") }}</div>
+{% endif %}
+
 {% if clicked_date %}
 <div class="callout" style="background:var(--accent-soft);border:1px solid var(--border);border-left:3px solid var(--accent);padding:10px 16px;border-radius:4px;margin-bottom:20px;font-size:13px;color:var(--accent);">
   カレンダーから選択: <strong>{{ clicked_date }}({{ weekday_labels[highlight_weekday] }}曜日)</strong>

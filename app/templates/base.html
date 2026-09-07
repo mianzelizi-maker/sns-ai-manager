@@ -284,6 +284,11 @@
   </style>
 </head>
 <body>
+  {% if read_only_mode %}
+  <div style="background:var(--accent-warm);color:#fff;text-align:center;padding:6px 12px;font-size:12.5px;font-weight:700;">
+    🔒 デモ公開環境(閲覧専用) — 投稿・承認・生成などの操作は無効になっています
+  </div>
+  {% endif %}
   <div class="topbar">
     <span class="brand">SNS AI運用システム</span>
     <nav>

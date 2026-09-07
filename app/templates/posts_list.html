@@ -5,7 +5,7 @@
 <p class="page-lead">AIが生成した投稿の下書きを確認・編集し、承認してから投稿します。</p>
 
 {% if request.query_params.get("error") %}
-<div class="banner-error">投稿に失敗しました: {{ request.query_params.get("error") }}</div>
+<div class="banner-error">{{ request.query_params.get("error") }}</div>
 {% endif %}
 
 <div class="card">

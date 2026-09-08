@@ -5,7 +5,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+def _client() -> anthropic.Anthropic:
+    # 起動時ではなく呼び出し時に生成する(READ_ONLY_MODEの環境ではキー未設定でも起動できるように)
+    return anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
 SYSTEM_PROMPT = """あなたはSNS運用担当者です。渡された記事の内容から、X(旧Twitter)とInstagram向けの投稿文をそれぞれ作成してください。
 
@@ -22,7 +24,7 @@ SYSTEM_PROMPT = """あなたはSNS運用担当者です。渡された記事の�
 def generate_sns_posts(title: str, body: str) -> dict:
     user_message = f"タイトル: {title}\n\n本文:\n{body}"
 
-    response = client.messages.create(
+    response = _client().messages.create(
         model="claude-opus-5",
         max_tokens=1024,
         system=SYSTEM_PROMPT,
@@ -61,7 +63,7 @@ def generate_image_prompt(title: str, body: str, instruction: str = "") -> str:
     if instruction:
         user_message += f"\n\n追加の指示(必ず反映すること): {instruction}"
 
-    response = client.messages.create(
+    response = _client().messages.create(
         model="claude-opus-5",
         max_tokens=300,
         system=IMAGE_PROMPT_SYSTEM,

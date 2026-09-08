@@ -1,4 +1,5 @@
 import os
+import shutil
 from datetime import date, datetime
 from pathlib import Path
 from urllib.parse import quote
@@ -26,6 +27,22 @@ from app.recommender import (
 from app.scheduler import start_scheduler
 from app.x_client import post_tweet
 
+READ_ONLY_MODE = os.environ.get("READ_ONLY_MODE", "").lower() == "true"
+
+# 閲覧専用の公開デモで、DBが空の状態でデプロイされた場合にサンプルデータを投入する。
+_DEMO_DB = Path("demo_seed.db")
+_DEMO_IMAGES = Path("demo_data/images")
+if READ_ONLY_MODE:
+    db_path = Path("sns_manager.db")
+    if not db_path.exists() and _DEMO_DB.exists():
+        shutil.copy(_DEMO_DB, db_path)
+    if _DEMO_IMAGES.exists():
+        IMAGE_DIR.mkdir(exist_ok=True)
+        for image_file in _DEMO_IMAGES.glob("*.png"):
+            dest = IMAGE_DIR / image_file.name
+            if not dest.exists():
+                shutil.copy(image_file, dest)
+
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="SNS AI運用システム")
@@ -42,8 +59,6 @@ def _image_version(filename: str | None) -> int:
 
 
 templates.env.globals["image_version"] = _image_version
-
-READ_ONLY_MODE = os.environ.get("READ_ONLY_MODE", "").lower() == "true"
 templates.env.globals["read_only_mode"] = READ_ONLY_MODE
 
 
@@ -63,7 +78,9 @@ async def read_only_guard(request: Request, call_next):
 
 @app.on_event("startup")
 def _start_scheduler():
-    start_scheduler()
+    # 閲覧専用の公開デモでは、意図せず実際のSNSへ自動投稿されないようスケジューラーを起動しない
+    if not READ_ONLY_MODE:
+        start_scheduler()
 
 
 @app.get("/health")

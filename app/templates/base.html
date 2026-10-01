@@ -296,6 +296,9 @@
       <a href="/calendar" class="{% if active_page == 'calendar' %}active{% endif %}">カレンダー</a>
       <a href="/recommendations" class="{% if active_page == 'recommendations' %}active{% endif %}">レコメンド</a>
     </nav>
+    {% if auth_enabled %}
+    <form method="post" action="/logout" style="margin-left:auto"><button type="submit" style="padding:5px 12px;font-size:12.5px;cursor:pointer">ログアウト</button></form>
+    {% endif %}
   </div>
   <main>
     {% block content %}{% endblock %}

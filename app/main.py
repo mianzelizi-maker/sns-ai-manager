@@ -7,10 +7,11 @@ from urllib.parse import quote
 from fastapi import Depends, FastAPI, Form, Request
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.sessions import SessionMiddleware
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
-from app import models  # noqa: F401  register models before create_all
+from app import auth, models  # noqa: F401  register models before create_all
 from app.ai_generator import generate_image_prompt, generate_sns_posts
 from app.calendar_view import build_calendar
 from app.database import Base, engine, get_db
@@ -76,11 +77,73 @@ async def read_only_guard(request: Request, call_next):
     return await call_next(request)
 
 
+# 閲覧専用の公開デモは誰でも見られる前提なので、認証は更新操作ができる通常モードでのみ有効にする
+AUTH_ENABLED = not READ_ONLY_MODE and auth.admin_credentials() is not None
+_PUBLIC_PATHS = {"/login", "/health"}
+templates.env.globals["auth_enabled"] = AUTH_ENABLED
+
+
+def _safe_next(target: str) -> str:
+    """ログイン後の遷移先は、サイト内の相対パスのみ許可する(オープンリダイレクト対策)。"""
+    if target.startswith("/") and not target.startswith("//"):
+        return target
+    return "/posts"
+
+
+@app.middleware("http")
+async def require_login(request: Request, call_next):
+    if AUTH_ENABLED and request.url.path not in _PUBLIC_PATHS:
+        if not request.session.get("user"):
+            return RedirectResponse(
+                url="/login?next=" + quote(request.url.path), status_code=303
+            )
+    return await call_next(request)
+
+
+@app.get("/login")
+def login_form(request: Request, next: str = "/posts"):
+    return templates.TemplateResponse(
+        request=request, name="login.html", context={"error": None, "next": _safe_next(next)}
+    )
+
+
+@app.post("/login")
+def login(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+    next: str = Form("/posts"),
+):
+    if not auth.verify(username, password):
+        return templates.TemplateResponse(
+            request=request,
+            name="login.html",
+            context={"error": "ユーザー名またはパスワードが違います", "next": _safe_next(next)},
+            status_code=401,
+        )
+    request.session["user"] = username
+    return RedirectResponse(url=_safe_next(next), status_code=303)
+
+
+@app.post("/logout")
+def logout(request: Request):
+    request.session.clear()
+    return RedirectResponse(url="/login", status_code=303)
+
+
 @app.on_event("startup")
 def _start_scheduler():
     # 閲覧専用の公開デモでは、意図せず実際のSNSへ自動投稿されないようスケジューラーを起動しない
     if not READ_ONLY_MODE:
         start_scheduler()
+
+
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=os.environ.get("SESSION_SECRET") or os.urandom(32).hex(),
+    https_only=os.environ.get("SESSION_HTTPS_ONLY", "").lower() == "true",
+    same_site="lax",
+)
 
 
 @app.get("/health")

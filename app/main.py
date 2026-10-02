@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from app import auth, models  # noqa: F401  register models before create_all
 from app.ai_generator import generate_image_prompt, generate_sns_posts
 from app.calendar_view import build_calendar
+from app.engagement import build_summary, refresh_engagement
 from app.database import Base, engine, get_db
 from app.image_generator import IMAGE_DIR, generate_image
 from app.instagram_client import post_to_instagram
@@ -69,7 +70,8 @@ async def read_only_guard(request: Request, call_next):
     デモ用に不特定多数へ公開したURLで、投稿実行などの操作をされないための安全策。
     """
     if READ_ONLY_MODE and request.method == "POST":
-        target = "/recommendations" if request.url.path.startswith("/recommendations") else "/posts"
+        path = request.url.path
+        target = next((t for t in ("/recommendations", "/analytics") if path.startswith(t)), "/posts")
         return RedirectResponse(
             url=f"{target}?error=" + quote("デモ公開環境のため、この操作は無効になっています"),
             status_code=303,
@@ -324,6 +326,24 @@ def calendar_page(
             "next_month": next_month,
             "today": today if (today.year == year and today.month == month) else None,
         },
+    )
+
+
+@app.get("/analytics")
+def analytics_page(request: Request, db: Session = Depends(get_db)):
+    return templates.TemplateResponse(
+        request=request, name="analytics.html", context={"summary": build_summary(db)}
+    )
+
+
+@app.post("/analytics/refresh")
+def refresh_analytics(db: Session = Depends(get_db)):
+    try:
+        updated = refresh_engagement(db)
+    except Exception as exc:
+        return RedirectResponse(url="/analytics?error=" + quote(str(exc)), status_code=303)
+    return RedirectResponse(
+        url="/analytics?notice=" + quote(f"{updated}件の反応数を更新しました"), status_code=303
     )
 
 

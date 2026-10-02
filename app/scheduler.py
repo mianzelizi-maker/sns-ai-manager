@@ -160,8 +160,19 @@ def _job() -> None:
         db.close()
 
 
+def _engagement_job() -> None:
+    from app.engagement import refresh_engagement
+
+    db = SessionLocal()
+    try:
+        refresh_engagement(db)
+    finally:
+        db.close()
+
+
 def start_scheduler() -> BackgroundScheduler:
     scheduler = BackgroundScheduler()
     scheduler.add_job(_job, "interval", seconds=60, id="run_due_schedules")
+    scheduler.add_job(_engagement_job, "interval", hours=1, id="refresh_engagement")
     scheduler.start()
     return scheduler

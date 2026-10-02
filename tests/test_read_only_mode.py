@@ -38,3 +38,10 @@ def test_read_only_allows_pages(client_factory):
     client = client_factory(read_only=True)
     for path in ("/posts", "/calendar", "/recommendations"):
         assert client.get(path).status_code == 200, path
+
+
+def test_read_only_analytics_page_and_refresh_block(client_factory):
+    client = client_factory(read_only=True)
+    assert client.get("/analytics").status_code == 200
+    response = client.post("/analytics/refresh")
+    assert response.headers["location"].startswith("/analytics?error=")

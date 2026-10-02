@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% set active_page = "analytics" %}
+{% block content %}
+<h1>分析</h1>
+<p class="page-lead">投稿後の反応(いいね・リポスト・返信・引用)を集計します。反応数は1時間ごとに自動で取得され、直近30日の投稿が対象です。</p>
+
+{% if request.query_params.get("error") %}
+<div class="banner-error">{{ request.query_params.get("error") }}</div>
+{% endif %}
+{% if request.query_params.get("notice") %}
+<div style="background:var(--accent-soft);border-left:3px solid var(--accent);padding:10px 16px;border-radius:4px;margin-bottom:20px;font-size:13px;color:var(--accent);">{{ request.query_params.get("notice") }}</div>
+{% endif %}
+{% if summary.has_sample %}
+<div style="background:var(--accent-warm-soft);border-left:3px solid var(--accent-warm);padding:10px 16px;border-radius:4px;margin-bottom:20px;font-size:13px;color:var(--accent-warm);">
+  この画面の反応数はデモ用のサンプル値です。実際のSNSから取得した値ではありません。
+</div>
+{% endif %}
+
+<form method="post" action="/analytics/refresh" style="margin-bottom:20px">
+  <button type="submit">今すぐ反応数を更新</button>
+</form>
+
+{% if not summary.rows %}
+<div class="card"><p style="padding:18px;margin:0;color:var(--ink-muted)">反応数のデータがまだありません。投稿後、次の自動取得(1時間ごと)か「今すぐ反応数を更新」で取得されます。Instagramはモック投稿のため取得できません。</p></div>
+{% else %}
+
+<div class="card">
+  <h2>サマリー</h2>
+  <table>
+    <tbody>
+      <tr><th>集計した投稿数</th><td>{{ summary.rows|length }}件</td></tr>
+      <tr><th>反応の合計</th><td>{{ summary.total_score }}</td></tr>
+      {% set best = summary.weekday_stats|sort(attribute="average", reverse=true)|first %}
+      <tr><th>反応が多い曜日</th><td>{{ best.label }}曜日(1投稿あたり平均 {{ "%.1f"|format(best.average) }})</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h2>反応の多い投稿 TOP3</h2>
+  <table>
+    <thead><tr><th>順位</th><th>媒体</th><th>記事</th><th>反応</th></tr></thead>
+    <tbody>
+      {% for row in summary.top %}
+      <tr><td>{{ loop.index }}</td><td>{{ row.platform.value }}</td><td>{{ row.title }}</td><td>{{ row.score }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h2>曜日別の平均反応(日本時間)</h2>
+  <table>
+    <thead><tr><th>曜日</th><th>投稿数</th><th>平均反応</th><th></th></tr></thead>
+    <tbody>
+      {% set max_avg = summary.weekday_stats|map(attribute="average")|max %}
+      {% for stat in summary.weekday_stats %}
+      <tr>
+        <td>{{ stat.label }}</td><td>{{ stat.count }}</td><td>{{ "%.1f"|format(stat.average) }}</td>
+        <td style="width:50%"><div style="height:10px;background:var(--accent);border-radius:3px;width:{{ (stat.average / max_avg * 100) if max_avg else 0 }}%"></div></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h2>投稿ごとの反応</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>投稿日時(JST)</th><th>媒体</th><th>記事</th><th>いいね</th><th>リポスト</th><th>返信</th><th>引用</th><th>表示回数</th><th>反応率</th></tr></thead>
+    <tbody>
+      {% for row in summary.rows %}
+      {% set m = row.metrics %}
+      <tr>
+        <td>{{ row.posted_jst.strftime("%Y-%m-%d %H:%M") }}</td>
+        <td>{{ row.platform.value }}</td>
+        <td>{{ row.title }}</td>
+        <td>{{ m.likes }}</td><td>{{ m.reposts }}</td><td>{{ m.replies }}</td><td>{{ m.quotes }}</td>
+        <td>{{ m.impressions if m.impressions is not none else "—" }}</td>
+        <td>{{ "%.1f%%"|format(row.rate * 100) if row.rate is not none else "—" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -111,3 +111,32 @@ def test_summary_ignores_posts_without_metrics_and_flags_samples(add_log, db):
     summary = engagement.build_summary(db)
 
     assert len(summary["rows"]) == 1 and summary["has_sample"] is True
+
+
+def test_x_fetch_uses_user_auth_and_maps_metrics(monkeypatch):
+    # OAuth1のユーザー認証を指定しないとBearerトークン扱いになり、401になる
+    captured = {}
+
+    class FakeClient:
+        def get_tweet(self, tweet_id, **kwargs):
+            captured.update(kwargs)
+
+            class Response:
+                data = {
+                    "public_metrics": {
+                        "like_count": 5,
+                        "retweet_count": 2,
+                        "reply_count": 1,
+                        "quote_count": 0,
+                        "impression_count": 80,
+                    }
+                }
+
+            return Response()
+
+    monkeypatch.setattr(engagement, "_v2_client", lambda: FakeClient())
+
+    metrics = engagement.fetch_metrics(models.Platform.X, "123")
+
+    assert captured["user_auth"] is True
+    assert metrics == {"likes": 5, "reposts": 2, "replies": 1, "quotes": 0, "impressions": 80}

@@ -26,7 +26,9 @@ def fetch_metrics(platform: models.Platform, external_post_id: str) -> dict | No
         return None
 
     if platform == models.Platform.X:
-        response = _v2_client().get_tweet(external_post_id, tweet_fields=["public_metrics"])
+        response = _v2_client().get_tweet(
+            external_post_id, tweet_fields=["public_metrics"], user_auth=True
+        )
         m = response.data["public_metrics"]
         return {
             "likes": m.get("like_count", 0),
